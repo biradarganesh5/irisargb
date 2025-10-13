@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iris ARGB - Per-LED Control Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 191, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 20, 147, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 60% 90%, rgba(138, 43, 226, 0.12) 0%, transparent 50%);
+            background-size: 200% 200%;
+            animation: moveGradient 15s ease infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes moveGradient {
+            0%, 100% {
+                background-position: 0% 0%, 100% 100%, 50% 0%, 0% 100%;
+            }
+            25% {
+                background-position: 100% 0%, 0% 100%, 100% 50%, 50% 0%;
+            }
+            50% {
+                background-position: 100% 100%, 0% 0%, 0% 100%, 100% 50%;
+            }
+            75% {
+                background-position: 0% 100%, 100% 0%, 50% 100%, 0% 50%;
+            }
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #8a2be2;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 2rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(138, 43, 226, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -200px;
+            right: -200px;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 191, 255, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -100px;
+            left: -100px;
+            animation: pulse 5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #00bfff, #8a2be2, #ff1493);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient 3s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-subtitle {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .hero-description {
+            font-size: 1.2rem;
+            color: #b0b0b0;
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            background: linear-gradient(45deg, #8a2be2, #00bfff);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(138, 43, 226, 0.4);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(138, 43, 226, 0.6);
+        }
+
+        .cta-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(138, 43, 226, 0.5);
+        }
+
+        .features {
+            padding: 5rem 2rem;
+            background: rgba(26, 26, 46, 0.5);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            background: linear-gradient(45deg, #00bfff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(138, 43, 226, 0.5);
+            box-shadow: 0 10px 30px rgba(138, 43, 226, 0.3);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #00bfff;
+        }
+
+        .feature-card p {
+            color: #b0b0b0;
+            line-height: 1.6;
+        }
+
+        .products {
+            padding: 5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .product-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .product-card {
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.8), rgba(40, 40, 70, 0.6));
+            border-radius: 25px;
+            padding: 2.5rem;
+            border: 2px solid transparent;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(138, 43, 226, 0.1), rgba(0, 191, 255, 0.1));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
+        }
+
+        .product-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            border-color: #8a2be2;
+            box-shadow: 0 20px 50px rgba(138, 43, 226, 0.5);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #ff1493, #ff6b6b);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .port-count {
+            font-size: 4rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00bfff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-name {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .product-description {
+            color: #b0b0b0;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .port-info {
+            background: rgba(0, 191, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid #00bfff;
+        }
+
+        .port-info p {
+            color: #00bfff;
+            font-weight: 600;
+        }
+
+        .price {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #00bfff;
+            font-weight: bold;
+        }
+
+        .buy-button {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            background: linear-gradient(45deg, #8a2be2, #00bfff);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buy-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(138, 43, 226, 0.6);
+        }
+
+        .specs {
+            padding: 5rem 2rem;
+            background: rgba(26, 26, 46, 0.5);
+        }
+
+        .specs-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .spec-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border-left: 4px solid #8a2be2;
+        }
+
+        .spec-label {
+            color: #00bfff;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .spec-value {
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        .demo {
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+
+        .demo-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 2rem auto 0;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(138, 43, 226, 0.4);
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .video-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 20px;
+        }
+
+        .how-it-works {
+            padding: 5rem 2rem;
+            background: rgba(26, 26, 46, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+
+        .how-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .how-content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            line-height: 1.8;
+            color: #b0b0b0;
+        }
+
+        .how-content p {
+            margin-bottom: 1rem;
+        }
+
+        .gallery {
+            padding: 5rem 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .gallery-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .gallery-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 2rem;
+            padding: 2rem 0;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(138, 43, 226, 0.5) rgba(255, 255, 255, 0.1);
+        }
+
+        .gallery-scroll::-webkit-scrollbar {
+            height: 10px;
+        }
+
+        .gallery-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .gallery-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #8a2be2, #00bfff);
+            border-radius: 10px;
+        }
+
+        .gallery-scroll::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #9b3bf5, #1ac9ff);
+        }
+
+        .gallery-item {
+            flex: 0 0 400px;
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.8), rgba(40, 40, 70, 0.6));
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(138, 43, 226, 0.3);
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-10px) scale(1.05);
+            border-color: #8a2be2;
+            box-shadow: 0 20px 50px rgba(138, 43, 226, 0.6);
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .gallery-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #8a2be2;
+            font-size: 4rem;
+        }
+
+        .gallery-info {
+            padding: 1.5rem;
+        }
+
+        .gallery-info h3 {
+            color: #00bfff;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .gallery-info p {
+            color: #b0b0b0;
+            line-height: 1.6;
+        }
+
+        .gallery-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #8a2be2, #00bfff);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .scroll-hint {
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            animation: fadeInOut 2s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .faq {
+            padding: 5rem 2rem;
+        }
+
+        .faq-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #8a2be2;
+        }
+
+        .faq-question {
+            color: #00bfff;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .faq-answer {
+            color: #b0b0b0;
+            line-height: 1.6;
+        }
+
+        .about {
+            padding: 5rem 2rem;
+            background: rgba(26, 26, 46, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+
+        .about-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .about-content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3rem;
+            border-radius: 25px;
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            margin-bottom: 3rem;
+        }
+
+        .about-content p {
+            color: #b0b0b0;
+            line-height: 1.8;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .social-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .social-card {
+            background: linear-gradient(145deg, rgba(26, 26, 46, 0.8), rgba(40, 40, 70, 0.6));
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            transition: all 0.4s ease;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .social-card:hover {
+            transform: translateY(-10px);
+            border-color: #8a2be2;
+            box-shadow: 0 15px 40px rgba(138, 43, 226, 0.5);
+        }
+
+        .social-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            background: rgba(138, 43, 226, 0.2);
+        }
+
+        .social-card h3 {
+            color: #00bfff;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .social-card p {
+            color: #b0b0b0;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .social-card:hover h3 {
+            color: #8a2be2;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(10, 10, 10, 0.8);
+            color: #888;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.4rem;
+            }
+
+            .hero-description {
+                font-size: 1rem;
+            }
+
+            .product-selector {
+                grid-template-columns: 1fr;
+            }
+
+            nav ul {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#home">IRIS ARGB</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#products">Buy Now</a></li>
+            <li><a href="#specs">Specs</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="#gallery">Gallery</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="#about">About Us</a></li>
+        </ul>
+    </nav>
+
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>IRIS ARGB</h1>
+            <p class="hero-subtitle">Smoother effects. Per-LED control. No PC bloatware.</p>
+            <p class="hero-description">
+                Control from your mobile app, web browser, or even Alexa.<br>
+                Optional sync with SignalRGB and OpenRGB.
+            </p>
+            <div class="hero-buttons">
+                <a href="#demo" class="cta-button">Watch Effects</a>
+                <a href="#how-it-works" class="cta-button cta-secondary">How It Works</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="features-container">
+            <h2 class="section-title">Why IRIS ARGB Controller?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>🔌 Multiple ARGB Ports</h3>
+                    <p>Connect multiple fans and strips; powered by SATA for stable current delivery across all connected devices.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>✨ Per-LED Animations</h3>
+                    <p>Individually addressable control across all ports enables buttery-smooth transitions and complex effects.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎨 100+ Built-in Effects</h3>
+                    <p>Change looks without installing any PC software. Switch effects from your phone or browser instantly.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📱 Mobile / Web / Alexa</h3>
+                    <p>Control from your phone, a web UI, or with voice commands via Alexa routines. Total flexibility.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔄 SignalRGB / OpenRGB</h3>
+                    <p>Optional syncing with your RAM and other devices using popular community apps for unified lighting.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔓 Open-Source Core</h3>
+                    <p>Runs WLED firmware on ESP32, giving you flexibility, customization options, and frequent improvements.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="products" id="products">
+        <h2 class="section-title">Choose Your Configuration</h2>
+        <p style="text-align: center; color: #b0b0b0; margin-bottom: 1rem; font-size: 1.1rem;">
+            All models feature identical performance, per-LED control, and 100+ effects — select based on the number of devices you need to control.
+        </p>
+        
+        <div class="product-selector">
+            <div class="product-card">
+                <div class="port-count">3</div>
+                <h3 class="product-name">Iris X3</h3>
+                <p class="product-description">
+                    Perfect for compact builds and minimalist setups. Control up to 3 ARGB devices with per-LED precision.
+                </p>
+                <div class="port-info">
+                    <p>✓ 3 × 5V ARGB Ports with Per-LED Control</p>
+                </div>
+                <div class="price">₹999</div>
+                <button class="buy-button" onclick="handlePurchase('X3', '999')">Buy Iris X3</button>
+            </div>
+
+            <div class="product-card">
+                <div class="port-count">6</div>
+                <h3 class="product-name">Iris X6</h3>
+                <p class="product-description">
+                    Balanced choice for most builds. Ideal for gaming setups with fans, strips, and multiple RGB components.
+                </p>
+                <div class="port-info">
+                    <p>✓ 6 × 5V ARGB Ports with Per-LED Control</p>
+                </div>
+                <div class="price">₹1,499</div>
+                <button class="buy-button" onclick="handlePurchase('X6', '1499')">Buy Iris X6</button>
+            </div>
+
+            <div class="product-card">
+                <span class="popular-badge">MOST POPULAR</span>
+                <div class="port-count">10</div>
+                <h3 class="product-name">Iris X10</h3>
+                <p class="product-description">
+                    Maximum capacity for enthusiast builds. Control extensive RGB ecosystems with room to expand.
+                </p>
+                <div class="port-info">
+                    <p>✓ 10 × 5V ARGB Ports with Per-LED Control</p>
+                </div>
+                <div class="price">₹1,999</div>
+                <button class="buy-button" onclick="handlePurchase('X10', '1999')">Buy Iris X10</button>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem; background: rgba(0, 191, 255, 0.1); border-radius: 20px; border: 1px solid rgba(0, 191, 255, 0.3);">
+            <h3 style="color: #00bfff; margin-bottom: 1rem;">🎯 Not Sure Which to Choose?</h3>
+            <p style="color: #b0b0b0; line-height: 1.6;">
+                <strong>Iris X3:</strong> Small form factor builds, desk setups with few RGB devices<br>
+                <strong>Iris X6:</strong> Standard gaming PCs, dual-monitor setups, balanced builds<br>
+                <strong>Iris X10:</strong> Enthusiast builds, streaming stations, full room lighting
+            </p>
+        </div>
+    </section>
+
+    <section class="specs" id="specs">
+        <div class="specs-container">
+            <h2 class="section-title">Technical Specifications</h2>
+            <div class="specs-grid">
+                <div class="spec-item">
+                    <div class="spec-label">Power</div>
+                    <div class="spec-value">SATA</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Ports</div>
+                    <div class="spec-value">3 / 6 / 10 × ARGB (5V, 3-pin)</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Control</div>
+                    <div class="spec-value">Mobile app • Web UI • Alexa</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Effects</div>
+                    <div class="spec-value">100+ inbuilt (no PC software needed)</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Sync</div>
+                    <div class="spec-value">SignalRGB • OpenRGB (over network)</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Firmware</div>
+                    <div class="spec-value">WLED (ESP32)</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Warranty</div>
+                    <div class="spec-value">1 year (controller); 2 months on chip</div>
+                </div>
+                <div class="spec-item">
+                    <div class="spec-label">Compatibility</div>
+                    <div class="spec-value">5V 3-pin ARGB only<br><small style="color: #ff6b6b;">Do not connect to 12V 4-pin RGB</small></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="demo" id="demo">
+        <div class="demo-container">
+            <h2 class="section-title">See It In Action</h2>
+            <p style="color: #b0b0b0; margin-bottom: 1rem; font-size: 1.1rem;">
+                Watch the buttery-smooth effects and per-LED animations in action
+            </p>
+            <div class="video-wrapper">
+                <img src="./iris.gif" alt="Iris ARGB Effects Demo" style="width: 100%; height: auto; display: block;">
+            </div>
+            <p style="color: #888; margin-top: 1rem; font-size: 0.9rem;">
+                Iris ARGB controller showing real-time per-LED effects
+            </p>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="how-it-works">
+        <div class="how-container">
+            <h2 class="section-title">How It Works</h2>
+            <div class="how-content">
+                <p>
+                    <strong style="color: #00bfff;">IRIS ARGB Controller</strong> uses an ESP32 running WLED firmware to drive addressable LEDs with precision and flexibility.
+                </p>
+                <p>
+                    A lightweight web UI exposes per-LED control and effect presets, allowing you to customize every aspect of your lighting without installing bloated PC software.
+                </p>
+                <p>
+                    SignalRGB and OpenRGB detect it as a WLED device over the network, enabling PC-wide synchronization with your RAM, motherboard, and other RGB components for a unified lighting experience.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="gallery" id="gallery">
+        <div class="gallery-container">
+            <h2 class="section-title">Controller Gallery</h2>
+            <p style="text-align: center; color: #b0b0b0; margin-bottom: 1rem; font-size: 1.1rem;">
+                Explore our range of ARGB controllers — scroll to see all models
+            </p>
+            
+            <div class="gallery-scroll">
+                <div class="gallery-item">
+                    <div class="gallery-image">
+                        <img src="./images/X3.jpg" alt="Iris X3 Controller" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'gallery-placeholder\'><span>🎮</span><p style=\'font-size: 0.8rem; margin-top: 1rem;\'>Iris X3</p></div>';">
+                    </div>
+                    <div class="gallery-info">
+                        <h3>Iris X3 Controller</h3>
+                        <p>Compact 3-port controller perfect for minimalist builds and small form factor PCs.</p>
+                        <span class="gallery-badge">3 Ports</span>
+                    </div>
+                </div>
+
+                <div class="gallery-item">
+                    <div class="gallery-image">
+                        <img src="./images/X6.jpg" alt="Iris X6 Controller" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'gallery-placeholder\'><span>⚡</span><p style=\'font-size: 0.8rem; margin-top: 1rem;\'>Iris X6</p></div>';">
+                    </div>
+                    <div class="gallery-info">
+                        <h3>Iris X6 Controller</h3>
+                        <p>Balanced model — ideal for standard gaming setups with multiple RGB devices.</p>
+                        <span class="gallery-badge">6 Ports</span>
+                    </div>
+                </div>
+
+                <div class="gallery-item">
+                    <div class="gallery-image">
+                        <img src="./images/X10.jpg" alt="Iris X10 Controller" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'gallery-placeholder\'><span>🚀</span><p style=\'font-size: 0.8rem; margin-top: 1rem;\'>Iris X10</p></div>';">
+                    </div>
+                    <div class="gallery-info">
+                        <h3>Iris X10 Controller</h3>
+                        <p>Maximum capacity for enthusiast builds with extensive RGB ecosystems and room to grow.</p>
+                        <span class="gallery-badge">10 Ports</span>
+                    </div>
+                </div>
+
+                <div class="gallery-item">
+                    <div class="gallery-image">
+                        <img src="./images/setup.jpg" alt="Installation Setup" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'gallery-placeholder\'><span>💡</span><p style=\'font-size: 0.8rem; margin-top: 1rem;\'>Setup</p></div>';">
+                    </div>
+                    <div class="gallery-info">
+                        <h3>Installation Setup</h3>
+                        <p>Easy installation with SATA power connection and simple 3-pin ARGB headers.</p>
+                        <span class="gallery-badge">Quick Setup</span>
+                    </div>
+                </div>
+
+                <div class="gallery-item">
+                    <div class="gallery-image">
+                        <img src="./images/control.jpg" alt="Mobile Control" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'gallery-placeholder\'><span>📱</span><p style=\'font-size: 0.8rem; margin-top: 1rem;\'>Control</p></div>';">
+                    </div>
+                    <div class="gallery-info">
+                        <h3>Mobile Control</h3>
+                        <p>Control your lighting from anywhere using the intuitive mobile app interface.</p>
+                        <span class="gallery-badge">Remote Access</span>
+                    </div>
+                </div>
+
+                <div class="gallery-item">
+                    <div class="gallery-image">
+                        <img src="./images/effects.jpg" alt="Custom Effects" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'gallery-placeholder\'><span>🎨</span><p style=\'font-size: 0.8rem; margin-top: 1rem;\'>Effects</p></div>';">
+                    </div>
+                    <div class="gallery-info">
+                        <h3>Custom Effects</h3>
+                        <p>100+ built-in effects with per-LED control for creating stunning lighting displays.</p>
+                        <span class="gallery-badge">100+ Effects</span>
+                    </div>
+                </div>
+            </div>
+            
+            <p class="scroll-hint">← Scroll horizontally to see more →</p>
+        </div>
+    </section>
+
+    <section class="faq" id="faq">
+        <div class="faq-container">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Do I need any PC software?</div>
+                <div class="faq-answer">
+                    No. The controller has 100+ effects built-in and can be controlled via mobile app or web browser. Optional: use SignalRGB/OpenRGB if you want system-wide synchronization with other RGB devices.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Can it control fans and LED strips together?</div>
+                <div class="faq-answer">
+                    Yes, as long as they are 5V addressable (3-pin) ARGB devices. The SATA power ensures stable current delivery within the limits of your PSU.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Does it work with Alexa?</div>
+                <div class="faq-answer">
+                    Yes, you can expose effects and segments to Alexa via supported integrations and create custom routines for voice control.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What's the difference between the X3, X6, and X10 models?</div>
+                <div class="faq-answer">
+                    Only the number of ARGB ports. All models have identical performance, per-LED control, 100+ effects, and all features. Choose based on how many RGB devices you need to connect.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="about" id="about">
+        <div class="about-container">
+            <h2 class="section-title">About Us</h2>
+            
+            <div class="about-content">
+                <p>
+                    Welcome to <strong style="color: #00bfff;">IRIS ARGB</strong> — where innovation meets illumination. We're passionate about bringing professional-grade RGB control to PC enthusiasts, gamers, and creators who demand more from their lighting setups.
+                </p>
+                <p>
+                    Born from the frustration of bloated software and limited control options, IRIS ARGB was designed to give you true freedom. With per-LED control, open-source firmware, and seamless integration across platforms, we've created a controller that puts you in complete command of your RGB ecosystem.
+                </p>
+                <p>
+                    Our mission is simple: deliver cutting-edge ARGB technology that's accessible, powerful, and built on open standards. Whether you're building your first gaming PC or crafting an elaborate streaming setup, IRIS ARGB scales with your ambitions.
+                </p>
+            </div>
+
+            <h3 style="text-align: center; color: #00bfff; font-size: 2rem; margin-bottom: 2rem;">Join Our Community</h3>
+            
+            <div class="social-links">
+                <a href="https://discord.gg/2VtQHS9tqc" target="_blank" class="social-card">
+                    <div class="social-logo">
+                        <svg width="60" height="60" viewBox="0 0 71 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z" fill="#5865F2"/>
+                        </svg>
+                    </div>
+                    <h3>Discord Community</h3>
+                    <p>Join thousands of RGB enthusiasts, get support, share your builds, and stay updated with the latest news and features.</p>
+                </a>
+
+                <a href="https://www.youtube.com/@ARGBGURU" target="_blank" class="social-card">
+                    <div class="social-logo">
+                        <svg width="60" height="60" viewBox="0 0 159 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M154.355 17.274C152.503 10.471 147.376 5.17 140.783 3.26C128.557 0 79.5 0 79.5 0C79.5 0 30.443 0 18.217 3.26C11.624 5.172 6.497 10.471 4.645 17.274C1.5 29.894 1.5 55.989 1.5 55.989C1.5 55.989 1.5 82.084 4.645 94.704C6.497 101.507 11.624 106.608 18.217 108.518C30.443 111.778 79.5 111.778 79.5 111.778C79.5 111.778 128.557 111.778 140.783 108.518C147.376 106.608 152.503 101.507 154.355 94.704C157.5 82.084 157.5 55.989 157.5 55.989C157.5 55.989 157.5 29.894 154.355 17.274Z" fill="#FF0000"/>
+                            <path d="M63.5 79.593L104.75 55.989L63.5 32.385V79.593Z" fill="white"/>
+                        </svg>
+                    </div>
+                    <h3>YouTube Channel</h3>
+                    <p>Watch tutorials, effect demos, installation guides, and get inspired by amazing RGB builds from the ARGB GURU community.</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 IRIS ARGB. All rights reserved.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.9rem;">Per-LED Control • SATA Hub • WLED Powered</p>
+    </footer>
+
+    <script>
+        function handlePurchase(model, price) {
+            alert(`Proceeding to checkout for Iris ${model} - ₹${price}\n\nYou'll be redirected to the payment gateway.`);
+            // Add your actual purchase/checkout logic here
+            // window.location.href = `/checkout?model=${model}&price=${price}`;
+        }
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Add subtle parallax effect
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const scrolled = window.pageYOffset;
+                    const hero = document.querySelector('.hero');
+                    if (hero && scrolled < window.innerHeight) {
+                        hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+                    }
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+    </script>
+</body>
+</html>
