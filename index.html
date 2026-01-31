@@ -270,7 +270,6 @@
             transition: all 0.4s ease;
             position: relative;
             overflow: hidden;
-            cursor: pointer;
         }
 
         .product-card::before {
@@ -349,23 +348,33 @@
         }
 
         .buy-button {
+            display: block;
             width: 100%;
             padding: 1rem;
             font-size: 1.1rem;
             background: linear-gradient(45deg, #8a2be2, #00bfff);
             border: none;
             border-radius: 15px;
-            color: white;
+            color: white !important;
             cursor: pointer;
             transition: all 0.3s ease;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 1px;
+            text-decoration: none;
+            text-align: center;
+            line-height: 1.5;
+            position: relative;
+            z-index: 10;
         }
 
         .buy-button:hover {
             transform: scale(1.05);
             box-shadow: 0 10px 30px rgba(138, 43, 226, 0.6);
+        }
+
+        .buy-button:active {
+            transform: scale(0.98);
         }
 
         .specs {
